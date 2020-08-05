@@ -1,13 +1,11 @@
-FROM node:8.5.0-alpine
+FROM node:8.17.0-alpine
 
 ARG SPACY_VERSION
+ARG SPACY_MODEL
 
-ENV LANG en
 ENV PORT 3000
 ENV SPACY_LOG_LEVEL error
 
-COPY ./src /app
-COPY ./entry/services.yml /services.yml
 COPY ./entry/.bashrc /root/.bashrc
 
 RUN apk update && apk add --no-cache python3 tini bash libgomp && \
@@ -23,20 +21,9 @@ RUN apk update && apk add --no-cache python3 tini bash libgomp && \
     pip3 install --upgrade pip setuptools && \
     if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi && \
 
-    python3 -m pip install -U socketIO-client spacy==${SPACY_VERSION} && \
-    python3 -m spacy.${LANG}.download && \
+    python3 -m pip install -U socketIO-client-nexus spacy==${SPACY_VERSION} && \
+    python3 -m spacy download ${SPACY_MODEL} && \
     pip show spacy > /etc/spacy_info && \
-
-    npm install --loglevel=warn npm@4.6.1 -global && \
-
-    npm install --loglevel=warn pm2 -g && \
-    cd /app && \
-    npm install --loglevel=warn && \
-
-    # `nohup node bin/spacy >/dev/null 2>/dev/null &` && \
-    # sleep 5 && \
-    # npm test && \
-    npm prune --production && \
 
     apk del .build-deps \
         build-base \
@@ -44,9 +31,31 @@ RUN apk update && apk add --no-cache python3 tini bash libgomp && \
         python3-dev \
         g++ && \
 
-    rm -r /usr/lib/python*/ensurepip && \
+    rm -r /usr/lib/python*/ensurepip
+
+# Create app directory
+WORKDIR /usr/src/app
+
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
+COPY src/package*.json ./
+
+# The git package is required if we reference a GitHub repository in package.json
+RUN npm install --loglevel=warn pm2 -g && \
+    npm install --loglevel=warn && \
+
+    # `nohup node bin/spacy >/dev/null 2>/dev/null &` && \
+    # sleep 5 && \
+    # npm test && \
+    npm prune --production && \
+
     rm -r /root/.cache && \
     rm -r /root/.npm
+
+# Bundle app source
+COPY ./src/ .
+COPY ./entry/services.yml /services.yml
 
 EXPOSE ${PORT}
 

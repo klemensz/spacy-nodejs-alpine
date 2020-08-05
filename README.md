@@ -149,5 +149,19 @@ in the same order input sentences were given.
 
 ### Building ###
 ```
-docker build -t [tag]:[version] --build-arg SPACY_VERSION=[spacy version] .
+docker build -t [tag]:[version] --build-arg SPACY_VERSION=[spacy version] --build-arg SPACY_MODEL=[spacy model].
+```
+
+Example:
+
+```
+docker build -t <your username>/spacy-nodejs-alpine:latest --build-arg SPACY_VERSION=2.3.2 --build-arg SPACY_MODEL=de_core_news_md .
+```
+
+### How-to
+
+#### Enter the container
+
+```sh
+docker exec -it <container id> /bin/bash
 ```
